@@ -252,7 +252,7 @@ class ProjectController extends BaseController
                 ->with('error', 'Jumlah melebihi sisa target atau tidak valid.');
         }
 
-        $this->transactionModel->insert([
+        $inserted = $this->transactionModel->insert([
             'project_id'  => $id,
             'investor_id' => $investorId,
             'jenis'       => $jenis,
@@ -262,9 +262,17 @@ class ProjectController extends BaseController
             'created_by'  => (int) session('user_id'),
         ]);
 
+        if ($inserted === false) {
+            return redirect()->to('/projects/' . $id)
+                ->with('error', 'Gagal menyimpan transaksi. Silakan coba lagi.');
+        }
+
         $sumsAfter = $this->transactionModel->sumsGroupedByInvestor($id);
         $progressAfter = $this->transactionService->buildProgress($investors, $result, $sumsAfter);
-        $this->syncProjectSettlement($id, $project, $progressAfter['is_fully_settled']);
+        if (! $this->syncProjectSettlement($id, $project, $progressAfter['is_fully_settled'])) {
+            return redirect()->to('/projects/' . $id)
+                ->with('error', 'Transaksi tersimpan, tetapi gagal memperbarui status proyek.');
+        }
 
         return redirect()->to('/projects/' . $id)
             ->with('success', 'Transaksi berhasil dicatat.');
@@ -279,8 +287,6 @@ class ProjectController extends BaseController
             throw PageNotFoundException::forPageNotFound();
         }
 
-        $this->transactionModel->delete($transactionId);
-
         $investors = $this->investorModel->getByProject($id);
         $operationalCosts = $this->operationalCostModel->getByProject($id);
 
@@ -290,9 +296,14 @@ class ProjectController extends BaseController
             return redirect()->to('/projects/' . $id)->with('error', $e->getMessage());
         }
 
+        $this->transactionModel->delete($transactionId);
+
         $sums = $this->transactionModel->sumsGroupedByInvestor($id);
         $progress = $this->transactionService->buildProgress($investors, $result, $sums);
-        $this->syncProjectSettlement($id, $project, $progress['is_fully_settled']);
+        if (! $this->syncProjectSettlement($id, $project, $progress['is_fully_settled'])) {
+            return redirect()->to('/projects/' . $id)
+                ->with('error', 'Transaksi terhapus, tetapi gagal memperbarui status proyek.');
+        }
 
         return redirect()->to('/projects/' . $id)
             ->with('success', 'Transaksi berhasil dihapus.');
@@ -301,27 +312,26 @@ class ProjectController extends BaseController
     /**
      * @param array<string, mixed> $project
      */
-    private function syncProjectSettlement(int $projectId, array $project, bool $fullySettled): void
+    private function syncProjectSettlement(int $projectId, array $project, bool $fullySettled): bool
     {
         $isCompleted = $this->projectModel->isCompleted($project);
 
         if ($fullySettled && ! $isCompleted) {
-            $this->projectModel->update($projectId, [
+            return $this->projectModel->update($projectId, [
                 'status'       => 'completed',
                 'completed_at' => date('Y-m-d H:i:s'),
-            ]);
-
-            return;
+            ]) !== false;
         }
 
         if (! $fullySettled && $isCompleted) {
-            $this->projectModel->update($projectId, [
+            return $this->projectModel->update($projectId, [
                 'status'       => 'active',
                 'completed_at' => null,
-            ]);
+            ]) !== false;
         }
 
         // Already completed and still settled: do not overwrite completed_at.
+        return true;
     }
 
     private function findOwnedProject(int $id): array
