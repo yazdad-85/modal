@@ -196,6 +196,12 @@ class ProjectController extends BaseController
     public function storeTransaction(int $id)
     {
         $project = $this->findOwnedProject($id);
+
+        if ($this->projectModel->isCompleted($project) && $this->transactionModel->countByProject($id) === 0) {
+            return redirect()->to('/projects/' . $id)
+                ->with('error', 'Proyek selesai (lama) tidak dapat menambah transaksi.');
+        }
+
         $investors = $this->investorModel->getByProject($id);
         $operationalCosts = $this->operationalCostModel->getByProject($id);
 

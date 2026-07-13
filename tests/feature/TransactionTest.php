@@ -125,4 +125,23 @@ final class TransactionTest extends FeatureTestCase
         $edit = $this->get('projects/' . $projectId . '/edit');
         $edit->assertRedirectTo('/projects/' . $projectId);
     }
+
+    public function testLegacyCompletedProjectRejectsNewTransaction(): void
+    {
+        $this->loginAsUser();
+        ['projectId' => $projectId, 'investorId' => $investorId] = $this->createSoloProject();
+
+        (new ProjectModel())->update($projectId, [
+            'status'       => 'completed',
+            'completed_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        $this->assertSame(0, (new TransactionModel())->countByProject($projectId));
+
+        $this->postTransaction($projectId, $investorId, TransactionModel::JENIS_SETOR, 10_000_000);
+
+        $this->assertSame(0, (new TransactionModel())->countByProject($projectId));
+        $project = (new ProjectModel())->find($projectId);
+        $this->assertSame('completed', $project['status']);
+    }
 }

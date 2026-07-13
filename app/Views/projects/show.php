@@ -39,6 +39,7 @@ foreach ($investorProgress as $row) {
 }
 $investorTotal       = count($investorProgress);
 $today               = date('Y-m-d');
+$canRecordTransactions = ! ($isCompleted && ! $hasTransactions);
 ?>
 
 <div class="result-page">
@@ -171,14 +172,16 @@ $today               = date('Y-m-d');
                 <span class="section-icon bg-success bg-opacity-10 text-success">⇄</span>
                 Progress Transaksi
             </div>
-            <button
-                type="button"
-                class="btn btn-sm btn-success"
-                data-bs-toggle="modal"
-                data-bs-target="#recordTransactionModal"
-            >
-                Catat Transaksi
-            </button>
+            <?php if ($canRecordTransactions): ?>
+                <button
+                    type="button"
+                    class="btn btn-sm btn-success"
+                    data-bs-toggle="modal"
+                    data-bs-target="#recordTransactionModal"
+                >
+                    Catat Transaksi
+                </button>
+            <?php endif; ?>
         </div>
         <div class="card-body">
             <?php
@@ -238,15 +241,17 @@ $today               = date('Y-m-d');
                                                 <span class="badge bg-warning bg-opacity-10 text-warning">Belum tuntas</span>
                                             <?php endif; ?>
                                         </div>
-                                        <button
-                                            type="button"
-                                            class="btn btn-sm btn-outline-success"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#recordTransactionModal"
-                                            data-investor-id="<?= esc((string) $invRow['investor_id']) ?>"
-                                        >
-                                            Catat
-                                        </button>
+                                        <?php if ($canRecordTransactions): ?>
+                                            <button
+                                                type="button"
+                                                class="btn btn-sm btn-outline-success"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#recordTransactionModal"
+                                                data-investor-id="<?= esc((string) $invRow['investor_id']) ?>"
+                                            >
+                                                Catat
+                                            </button>
+                                        <?php endif; ?>
                                     </div>
                                     <div class="mb-2">
                                         <div class="d-flex justify-content-between small mb-1">
@@ -581,6 +586,7 @@ $today               = date('Y-m-d');
     </div>
 </div>
 
+<?php if ($canRecordTransactions): ?>
 <div class="modal fade" id="recordTransactionModal" tabindex="-1" aria-labelledby="recordTransactionModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -645,4 +651,5 @@ $today               = date('Y-m-d');
     });
 })();
 </script>
+<?php endif; ?>
 <?= $this->endSection() ?>

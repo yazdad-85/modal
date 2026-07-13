@@ -757,68 +757,6 @@ body {
     }
 }
 
-/* Complete project modal */
-.complete-modal-section {
-    background: #f8f9fa;
-    border-radius: 0.75rem;
-    padding: 1rem 1.125rem;
-    margin-bottom: 0.75rem;
-}
-
-.complete-modal-section__title {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-weight: 600;
-    font-size: 0.9rem;
-    margin-bottom: 0.25rem;
-}
-
-.complete-modal-section__icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
-    font-size: 0.8rem;
-}
-
-.complete-modal-section__hint {
-    font-size: 0.75rem;
-    color: #6c757d;
-    margin-bottom: 0.75rem;
-}
-
-.complete-modal-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 1rem;
-    padding: 0.4rem 0;
-    font-size: 0.875rem;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-.complete-modal-row:last-child {
-    border-bottom: none;
-}
-
-.complete-modal-row--subtotal {
-    margin-top: 0.35rem;
-    padding-top: 0.65rem;
-    border-top: 1px dashed rgba(0, 0, 0, 0.12);
-    border-bottom: none;
-    font-size: 0.9rem;
-}
-
-.complete-modal-total {
-    background: linear-gradient(135deg, rgba(13, 110, 253, 0.06), rgba(25, 135, 84, 0.06));
-    border: 1px solid rgba(13, 110, 253, 0.15);
-    border-radius: 0.75rem;
-    padding: 1rem 1.125rem;
-}
-
 .tx-progress-card { border-radius: 0.75rem; }
 .tx-progress-bar { height: 6px; background: #e9ecef; border-radius: 3px; overflow: hidden; }
 .tx-progress-bar > span { display: block; height: 100%; background: #198754; }
