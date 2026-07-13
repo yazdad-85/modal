@@ -1,0 +1,41 @@
+# ModalCalc — upload ke document root (public_html), tanpa mengarahkan ke folder public/
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+	Options +FollowSymlinks
+	RewriteEngine On
+
+	# Jika aplikasi di subfolder (mis. domain.com/modal/), uncomment dan sesuaikan:
+	# RewriteBase /modal/
+
+	# Blok akses langsung ke folder sensitif
+	RewriteRule ^(?:app|writable|vendor|tests|docs|install)(?:/|$) - [F,L]
+
+	# Blok file sensitif di root
+	RewriteRule ^(?:\.env|\.git|composer\.(?:json|lock)|phpunit\.dist\.xml|spark|env)$ - [F,L,NC]
+
+	# Teruskan semua request ke folder public
+	RewriteCond %{REQUEST_URI} !^/public/
+	RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+<IfModule mod_authz_core.c>
+	<FilesMatch "^\.">
+		Require all denied
+	</FilesMatch>
+	<Files ".env">
+		Require all denied
+	</Files>
+</IfModule>
+<IfModule !mod_authz_core.c>
+	<FilesMatch "^\.">
+		Order allow,deny
+		Deny from all
+	</FilesMatch>
+	<Files ".env">
+		Order allow,deny
+		Deny from all
+	</Files>
+</IfModule>
+
+DirectoryIndex public/index.php
