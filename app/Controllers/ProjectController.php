@@ -3,9 +3,11 @@
 namespace App\Controllers;
 
 use App\Libraries\ProfitCalculator;
+use App\Libraries\TransactionService;
 use App\Models\InvestorModel;
 use App\Models\OperationalCostModel;
 use App\Models\ProjectModel;
+use App\Models\TransactionModel;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use InvalidArgumentException;
 
@@ -14,14 +16,18 @@ class ProjectController extends BaseController
     protected ProjectModel $projectModel;
     protected InvestorModel $investorModel;
     protected OperationalCostModel $operationalCostModel;
+    protected TransactionModel $transactionModel;
     protected ProfitCalculator $calculator;
+    protected TransactionService $transactionService;
 
     public function __construct()
     {
         $this->projectModel          = new ProjectModel();
         $this->investorModel         = new InvestorModel();
         $this->operationalCostModel  = new OperationalCostModel();
+        $this->transactionModel      = new TransactionModel();
         $this->calculator            = new ProfitCalculator();
+        $this->transactionService    = new TransactionService();
     }
 
     public function create()
@@ -74,6 +80,8 @@ class ProjectController extends BaseController
         $project = $this->findOwnedProject($id);
         $investors = $this->investorModel->getByProject($id);
         $operationalCosts = $this->operationalCostModel->getByProject($id);
+        $transactions = $this->transactionModel->getByProject($id);
+        $hasTransactions = $this->transactionModel->countByProject($id) > 0;
 
         try {
             $result = $this->runCalculation($project, $investors, $operationalCosts);
@@ -81,11 +89,23 @@ class ProjectController extends BaseController
             return redirect()->to('/dashboard')->with('error', $e->getMessage());
         }
 
+        $sums = $this->transactionModel->sumsGroupedByInvestor($id);
+        $progress = $this->transactionService->buildProgress($investors, $result, $sums);
+
+        $investorNames = [];
+        foreach ($investors as $investor) {
+            $investorNames[(int) $investor['id']] = $investor['nama'];
+        }
+
         return view('projects/show', [
             'project'           => $project,
             'investors'         => $investors,
             'operationalCosts'  => $operationalCosts,
             'result'            => $result,
+            'progress'          => $progress,
+            'transactions'      => $transactions,
+            'investorNames'     => $investorNames,
+            'hasTransactions'   => $hasTransactions,
         ]);
     }
 
@@ -98,6 +118,11 @@ class ProjectController extends BaseController
         if ($this->projectModel->isCompleted($project)) {
             return redirect()->to('/projects/' . $id)
                 ->with('error', 'Proyek selesai tidak dapat diedit.');
+        }
+
+        if ($this->transactionModel->countByProject($id) > 0) {
+            return redirect()->to('/projects/' . $id)
+                ->with('error', 'Proyek yang sudah memiliki transaksi tidak dapat diedit.');
         }
 
         $investors = $this->investorModel->getByProject($id);
@@ -121,6 +146,11 @@ class ProjectController extends BaseController
         if ($this->projectModel->isCompleted($project)) {
             return redirect()->to('/projects/' . $id)
                 ->with('error', 'Proyek selesai tidak dapat diedit.');
+        }
+
+        if ($this->transactionModel->countByProject($id) > 0) {
+            return redirect()->to('/projects/' . $id)
+                ->with('error', 'Proyek yang sudah memiliki transaksi tidak dapat diedit.');
         }
 
         $built = $this->buildProjectPayload();
@@ -163,22 +193,135 @@ class ProjectController extends BaseController
             ->with('success', 'Proyek berhasil dihapus.');
     }
 
-    public function complete(int $id)
+    public function storeTransaction(int $id)
     {
         $project = $this->findOwnedProject($id);
+        $investors = $this->investorModel->getByProject($id);
+        $operationalCosts = $this->operationalCostModel->getByProject($id);
 
-        if ($this->projectModel->isCompleted($project)) {
+        $jenis = (string) $this->request->getPost('jenis');
+        $tanggal = (string) $this->request->getPost('tanggal');
+        $investorId = (int) $this->request->getPost('investor_id');
+        $jumlah = $this->parseAmount($this->request->getPost('jumlah'));
+        $catatan = trim((string) $this->request->getPost('catatan'));
+
+        if (! in_array($jenis, TransactionModel::JENIS_LIST, true)) {
             return redirect()->to('/projects/' . $id)
-                ->with('error', 'Proyek sudah ditandai selesai.');
+                ->with('error', 'Jenis transaksi tidak valid.');
         }
 
-        $this->projectModel->update($id, [
-            'status'       => 'completed',
-            'completed_at' => date('Y-m-d H:i:s'),
+        $date = \DateTimeImmutable::createFromFormat('Y-m-d', $tanggal);
+        if ($date === false || $date->format('Y-m-d') !== $tanggal) {
+            return redirect()->to('/projects/' . $id)
+                ->with('error', 'Tanggal transaksi tidak valid.');
+        }
+
+        $investorIds = array_map(static fn (array $i): int => (int) $i['id'], $investors);
+        if (! in_array($investorId, $investorIds, true)) {
+            return redirect()->to('/projects/' . $id)
+                ->with('error', 'Pemodal tidak ditemukan pada proyek ini.');
+        }
+
+        try {
+            $result = $this->runCalculation($project, $investors, $operationalCosts);
+        } catch (InvalidArgumentException $e) {
+            return redirect()->to('/projects/' . $id)->with('error', $e->getMessage());
+        }
+
+        $sums = $this->transactionModel->sumsGroupedByInvestor($id);
+        $progress = $this->transactionService->buildProgress($investors, $result, $sums);
+
+        $progressRow = null;
+        foreach ($progress['investors'] as $row) {
+            if ((int) $row['investor_id'] === $investorId) {
+                $progressRow = $row;
+                break;
+            }
+        }
+
+        if ($progressRow === null) {
+            return redirect()->to('/projects/' . $id)
+                ->with('error', 'Pemodal tidak ditemukan pada proyek ini.');
+        }
+
+        $target = $this->transactionService->targetForJenis($progressRow, $jenis);
+        $sudah  = $this->transactionService->sudahForJenis($progressRow, $jenis);
+
+        if (! $this->transactionService->canRecord($target, $sudah, $jumlah)) {
+            return redirect()->to('/projects/' . $id)
+                ->with('error', 'Jumlah melebihi sisa target atau tidak valid.');
+        }
+
+        $this->transactionModel->insert([
+            'project_id'  => $id,
+            'investor_id' => $investorId,
+            'jenis'       => $jenis,
+            'jumlah'      => $jumlah,
+            'tanggal'     => $tanggal,
+            'catatan'     => $catatan !== '' ? $catatan : null,
+            'created_by'  => (int) session('user_id'),
         ]);
 
-        return redirect()->to('/dashboard?tab=completed')
-            ->with('success', 'Proyek berhasil ditandai selesai.');
+        $sumsAfter = $this->transactionModel->sumsGroupedByInvestor($id);
+        $progressAfter = $this->transactionService->buildProgress($investors, $result, $sumsAfter);
+        $this->syncProjectSettlement($id, $project, $progressAfter['is_fully_settled']);
+
+        return redirect()->to('/projects/' . $id)
+            ->with('success', 'Transaksi berhasil dicatat.');
+    }
+
+    public function deleteTransaction(int $id, int $transactionId)
+    {
+        $project = $this->findOwnedProject($id);
+        $transaction = $this->transactionModel->find($transactionId);
+
+        if ($transaction === null || (int) $transaction['project_id'] !== $id) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+
+        $this->transactionModel->delete($transactionId);
+
+        $investors = $this->investorModel->getByProject($id);
+        $operationalCosts = $this->operationalCostModel->getByProject($id);
+
+        try {
+            $result = $this->runCalculation($project, $investors, $operationalCosts);
+        } catch (InvalidArgumentException $e) {
+            return redirect()->to('/projects/' . $id)->with('error', $e->getMessage());
+        }
+
+        $sums = $this->transactionModel->sumsGroupedByInvestor($id);
+        $progress = $this->transactionService->buildProgress($investors, $result, $sums);
+        $this->syncProjectSettlement($id, $project, $progress['is_fully_settled']);
+
+        return redirect()->to('/projects/' . $id)
+            ->with('success', 'Transaksi berhasil dihapus.');
+    }
+
+    /**
+     * @param array<string, mixed> $project
+     */
+    private function syncProjectSettlement(int $projectId, array $project, bool $fullySettled): void
+    {
+        $isCompleted = $this->projectModel->isCompleted($project);
+
+        if ($fullySettled && ! $isCompleted) {
+            $this->projectModel->update($projectId, [
+                'status'       => 'completed',
+                'completed_at' => date('Y-m-d H:i:s'),
+            ]);
+
+            return;
+        }
+
+        if (! $fullySettled && $isCompleted) {
+            $this->projectModel->update($projectId, [
+                'status'       => 'active',
+                'completed_at' => null,
+            ]);
+        }
+
+        // Already completed and still settled: do not overwrite completed_at.
     }
 
     private function findOwnedProject(int $id): array

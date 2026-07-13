@@ -16,7 +16,8 @@ $routes->group('', ['filter' => 'auth'], static function ($routes) {
     $routes->get('projects/(:num)/edit', 'ProjectController::edit/$1');
     $routes->post('projects/(:num)', 'ProjectController::update/$1');
     $routes->post('projects/(:num)/delete', 'ProjectController::delete/$1');
-    $routes->post('projects/(:num)/complete', 'ProjectController::complete/$1');
+    $routes->post('projects/(:num)/transactions', 'ProjectController::storeTransaction/$1');
+    $routes->post('projects/(:num)/transactions/(:num)/delete', 'ProjectController::deleteTransaction/$1/$2');
     $routes->get('projects/(:num)/export/pdf', 'ExportController::pdf/$1');
     $routes->get('projects/(:num)/export/excel', 'ExportController::excel/$1');
 });
