@@ -2,6 +2,17 @@
 
 **ModalCalc** adalah aplikasi web untuk menghitung **pengembalian modal** dan **bagi hasil profit** investasi bisnis. Mendukung satu atau banyak pemodal, export PDF/Excel, dan pelacakan proyek aktif/selesai.
 
+## Fitur Utama
+
+Selain kalkulator bagi hasil, ModalCalc mendukung **pencatatan transaksi keuangan** di samping rencana perhitungan:
+
+- **Setor modal** — catat setoran bertahap dari setiap pemodal saat dana masuk di lapangan.
+- **Pengembalian modal** dan **profit pemodal** dicatat sebagai jenis transaksi terpisah, juga boleh bertahap.
+- Halaman **detail proyek** menampilkan **progres %** dan **sisa kewajiban** per pemodal untuk ketiga jenis transaksi tersebut.
+- Proyek **selesai otomatis** ketika semua kewajiban ke setiap pemodal sudah lunas — tidak ada lagi tombol **Tandai Selesai** manual.
+
+Profit operator tetap dihitung seperti biasa, tetapi tidak dicatat sebagai transaksi.
+
 ---
 
 ## Daftar Isi
@@ -13,7 +24,7 @@
 5. [Membuat Proyek Baru](#5-membuat-proyek-baru)
 6. [Melihat Hasil Perhitungan](#6-melihat-hasil-perhitungan)
 7. [Export PDF & Excel](#7-export-pdf--excel)
-8. [Menandai Proyek Selesai](#8-menandai-proyek-selesai)
+8. [Transaksi & Penyelesaian Proyek](#8-transaksi--penyelesaian-proyek)
 9. [Mengedit & Menghapus Proyek](#9-mengedit--menghapus-proyek)
 10. [Pemecahan Masalah](#10-pemecahan-masalah)
 
@@ -106,7 +117,7 @@ Setelah login, Anda melihat **Dashboard** dengan dua tab:
 | Tab | Keterangan |
 |-----|------------|
 | **Aktif** | Proyek yang masih berjalan — bisa diedit |
-| **Selesai** | Proyek yang sudah ditandai selesai — **hanya baca**, tidak bisa diedit |
+| **Selesai** | Proyek yang semua kewajiban pemodalnya sudah lunas — **hanya baca**, tidak bisa diedit |
 
 Setiap kartu proyek menampilkan nama, operator, total modal, dan status. Klik kartu untuk melihat detail perhitungan.
 
@@ -169,23 +180,25 @@ Laporan berisi semua data proyek dan breakdown perhitungan lengkap.
 
 ---
 
-## 8. Menandai Proyek Selesai
+## 8. Transaksi & Penyelesaian Proyek
 
-Gunakan tombol **Tandai Selesai** ketika semua dana sudah ditransfer di lapangan.
+Di halaman detail proyek, catat uang nyata lewat form **Tambah Transaksi**:
 
-Dialog konfirmasi menampilkan checklist dana yang harus sudah ditransfer:
+| Jenis | Kapan dicatat |
+|-------|----------------|
+| Setor modal | Pemodal menyerahkan modal ke proyek |
+| Pengembalian modal | Modal dikembalikan ke pemodal |
+| Pengembalian profit | Bagian profit pemodal dibayarkan |
 
-1. **Pengembalian modal** — per pemodal
-2. **Profit pemodal** — per pemodal + total pool
-3. **Profit operator** — ke operator
+Setiap catatan boleh **bertahap** — tidak harus sekaligus. Aplikasi menampilkan **progres %** dan **sisa** per pemodal.
 
-Klik **Ya, Semua Dana Sudah Ditransfer** hanya jika semua sudah benar-benar dibayar.
+Ketika semua kewajiban pemodal lunas (setor + pengembalian modal + profit):
 
-Setelah ditandai selesai:
-
-- Proyek pindah ke tab **Selesai**
+- Proyek **otomatis** pindah ke tab **Selesai**
 - Proyek **tidak dapat diedit** lagi
 - Data tetap bisa dilihat dan di-export
+
+Tidak ada tombol **Tandai Selesai** manual — status mengikuti catatan transaksi di lapangan.
 
 ---
 
@@ -243,8 +256,8 @@ php spark user:create "Nama User" email@domain.com password123
 
 ```
 Login → Dashboard → Proyek Baru → Isi data (3 langkah) → Simpan
-     → Lihat hasil → Export PDF/Excel → Transfer dana di lapangan
-     → Tandai Selesai → Proyek masuk tab Selesai (arsip)
+     → Lihat hasil → Catat transaksi (setor / pengembalian) → Export PDF/Excel
+     → Semua kewajiban lunas → Proyek otomatis masuk tab Selesai (arsip)
 ```
 
 ---
