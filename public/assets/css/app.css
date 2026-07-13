@@ -818,3 +818,7 @@ body {
     border-radius: 0.75rem;
     padding: 1rem 1.125rem;
 }
+
+.tx-progress-card { border-radius: 0.75rem; }
+.tx-progress-bar { height: 6px; background: #e9ecef; border-radius: 3px; overflow: hidden; }
+.tx-progress-bar > span { display: block; height: 100%; background: #198754; }

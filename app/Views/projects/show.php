@@ -18,6 +18,27 @@ $keuntunganBersih    = (int) $result['keuntungan_bersih'];
 $kotorKpiClass       = $isRugi ? 'review-kpi--loss' : 'review-kpi--profit';
 $kotorLabel          = $isRugi ? 'Rugi' : 'Profit Kotor';
 $bersihKpiClass      = $keuntunganBersih >= 0 ? 'review-kpi--profit' : 'review-kpi--loss';
+
+$progress            = $progress ?? ['project' => [], 'investors' => [], 'is_fully_settled' => false];
+$transactions        = $transactions ?? [];
+$investorNames       = $investorNames ?? [];
+$hasTransactions     = ! empty($hasTransactions);
+$jenisLabel          = [
+    'setor_modal'          => 'Setor modal',
+    'pengembalian_modal'   => 'Pengembalian modal',
+    'pengembalian_profit'  => 'Pengembalian profit',
+];
+$projectProgress     = $progress['project'] ?? [];
+$investorProgress    = $progress['investors'] ?? [];
+$isFullySettled      = ! empty($progress['is_fully_settled']);
+$settledCount        = 0;
+foreach ($investorProgress as $row) {
+    if (! empty($row['settled'])) {
+        $settledCount++;
+    }
+}
+$investorTotal       = count($investorProgress);
+$today               = date('Y-m-d');
 ?>
 
 <div class="result-page">
@@ -42,7 +63,7 @@ $bersihKpiClass      = $keuntunganBersih >= 0 ? 'review-kpi--profit' : 'review-k
                 </p>
             </div>
             <div class="result-actions d-flex flex-wrap gap-2">
-                <?php if (! $isCompleted): ?>
+                <?php if (! $hasTransactions && ! $isCompleted): ?>
                     <a href="<?= esc(site_url('projects/' . $project['id'] . '/edit')) ?>" class="btn btn-outline-secondary">
                         Edit
                     </a>
@@ -143,6 +164,188 @@ $bersihKpiClass      = $keuntunganBersih >= 0 ? 'review-kpi--profit' : 'review-k
             </div>
         </div>
     <?php endif; ?>
+
+    <div class="card review-section-card mb-3">
+        <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <span class="section-icon bg-success bg-opacity-10 text-success">⇄</span>
+                Progress Transaksi
+            </div>
+            <button
+                type="button"
+                class="btn btn-sm btn-success"
+                data-bs-toggle="modal"
+                data-bs-target="#recordTransactionModal"
+            >
+                Catat Transaksi
+            </button>
+        </div>
+        <div class="card-body">
+            <?php
+            $projectCards = [
+                'setor'  => ['label' => 'Setor modal', 'metric' => $projectProgress['setor'] ?? null],
+                'modal'  => ['label' => 'Pengembalian modal', 'metric' => $projectProgress['modal'] ?? null],
+                'profit' => ['label' => 'Pengembalian profit', 'metric' => $projectProgress['profit'] ?? null],
+            ];
+            ?>
+            <div class="row g-3 mb-4">
+                <?php foreach ($projectCards as $card): ?>
+                    <?php
+                    $metric = $card['metric'] ?? ['target' => 0, 'sudah' => 0, 'sisa' => 0, 'persen' => 0];
+                    $persen = max(0, min(100, (int) ($metric['persen'] ?? 0)));
+                    ?>
+                    <div class="col-12 col-md-4">
+                        <div class="card tx-progress-card h-100 border">
+                            <div class="card-body">
+                                <div class="review-kpi-label"><?= esc($card['label']) ?></div>
+                                <div class="fw-semibold money mb-1">
+                                    <?= esc(format_rupiah((int) $metric['sudah'])) ?>
+                                    <span class="text-muted fw-normal">/</span>
+                                    <?= esc(format_rupiah((int) $metric['target'])) ?>
+                                </div>
+                                <div class="tx-progress-bar mb-2">
+                                    <span style="width:<?= esc($persen) ?>%"></span>
+                                </div>
+                                <div class="d-flex justify-content-between small text-muted">
+                                    <span><?= esc($persen) ?>%</span>
+                                    <span>Sisa <?= esc(format_rupiah((int) $metric['sisa'])) ?></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+
+            <?php if ($investorProgress === []): ?>
+                <p class="text-muted small mb-0">Belum ada data progres pemodal.</p>
+            <?php else: ?>
+                <div class="row g-3">
+                    <?php foreach ($investorProgress as $invRow): ?>
+                        <?php
+                        $setorPct  = max(0, min(100, (int) ($invRow['setor']['persen'] ?? 0)));
+                        $modalPct  = max(0, min(100, (int) ($invRow['modal']['persen'] ?? 0)));
+                        $profitPct = max(0, min(100, (int) ($invRow['profit']['persen'] ?? 0)));
+                        ?>
+                        <div class="col-12 col-md-6">
+                            <div class="card tx-progress-card h-100 border">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
+                                        <div>
+                                            <div class="fw-semibold"><?= esc($invRow['nama']) ?></div>
+                                            <?php if (! empty($invRow['settled'])): ?>
+                                                <span class="badge bg-success bg-opacity-10 text-success">Tuntas</span>
+                                            <?php else: ?>
+                                                <span class="badge bg-warning bg-opacity-10 text-warning">Belum tuntas</span>
+                                            <?php endif; ?>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            class="btn btn-sm btn-outline-success"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#recordTransactionModal"
+                                            data-investor-id="<?= esc((string) $invRow['investor_id']) ?>"
+                                        >
+                                            Catat
+                                        </button>
+                                    </div>
+                                    <div class="mb-2">
+                                        <div class="d-flex justify-content-between small mb-1">
+                                            <span class="text-muted">Setor</span>
+                                            <span><?= esc($setorPct) ?>%</span>
+                                        </div>
+                                        <div class="tx-progress-bar">
+                                            <span style="width:<?= esc($setorPct) ?>%"></span>
+                                        </div>
+                                    </div>
+                                    <div class="mb-2">
+                                        <div class="d-flex justify-content-between small mb-1">
+                                            <span class="text-muted">Kembali modal</span>
+                                            <span><?= esc($modalPct) ?>%</span>
+                                        </div>
+                                        <div class="tx-progress-bar">
+                                            <span style="width:<?= esc($modalPct) ?>%"></span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="d-flex justify-content-between small mb-1">
+                                            <span class="text-muted">Kembali profit</span>
+                                            <span><?= esc($profitPct) ?>%</span>
+                                        </div>
+                                        <div class="tx-progress-bar">
+                                            <span style="width:<?= esc($profitPct) ?>%"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <div class="card review-section-card mb-3">
+        <div class="card-header">
+            <span class="section-icon bg-secondary bg-opacity-10 text-secondary">☰</span>
+            Riwayat Transaksi
+        </div>
+        <div class="card-body p-0">
+            <?php if ($transactions === []): ?>
+                <div class="p-3 text-muted small">Belum ada transaksi tercatat.</div>
+            <?php else: ?>
+                <div class="table-responsive">
+                    <table class="table review-table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Tanggal</th>
+                                <th>Pemodal</th>
+                                <th>Jenis</th>
+                                <th class="text-end">Jumlah</th>
+                                <th>Catatan</th>
+                                <th class="text-end">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($transactions as $tx): ?>
+                                <?php
+                                $txInvestorId = (int) ($tx['investor_id'] ?? 0);
+                                $txJenis      = (string) ($tx['jenis'] ?? '');
+                                ?>
+                                <tr>
+                                    <td data-label="Tanggal">
+                                        <?= esc(! empty($tx['tanggal']) ? date('d M Y', strtotime($tx['tanggal'])) : '—') ?>
+                                    </td>
+                                    <td data-label="Pemodal">
+                                        <?= esc($investorNames[$txInvestorId] ?? 'Pemodal #' . $txInvestorId) ?>
+                                    </td>
+                                    <td data-label="Jenis">
+                                        <?= esc($jenisLabel[$txJenis] ?? $txJenis) ?>
+                                    </td>
+                                    <td class="text-end money fw-semibold" data-label="Jumlah">
+                                        <?= esc(format_rupiah((int) ($tx['jumlah'] ?? 0))) ?>
+                                    </td>
+                                    <td data-label="Catatan">
+                                        <?= esc($tx['catatan'] ?? '') !== '' ? esc($tx['catatan']) : '—' ?>
+                                    </td>
+                                    <td class="text-end" data-label="Aksi">
+                                        <form
+                                            action="<?= esc(site_url('projects/' . $project['id'] . '/transactions/' . $tx['id'] . '/delete')) ?>"
+                                            method="post"
+                                            class="d-inline"
+                                            onsubmit="return confirm('Hapus transaksi ini?');"
+                                        >
+                                            <?= csrf_field() ?>
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">Hapus</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
 
     <div class="card review-section-card">
         <div class="card-header">
@@ -352,21 +555,21 @@ $bersihKpiClass      = $keuntunganBersih >= 0 ? 'review-kpi--profit' : 'review-k
         </div>
     <?php endif; ?>
 
-    <div class="result-footer d-flex flex-column flex-sm-row gap-2 justify-content-between mt-4 pt-3 border-top">
+    <div class="result-footer d-flex flex-column flex-sm-row gap-2 justify-content-between align-items-sm-center mt-4 pt-3 border-top">
         <a href="<?= esc(site_url('dashboard')) ?>" class="btn btn-outline-secondary">
             &larr; Kembali ke Dashboard
         </a>
-        <div class="d-flex flex-column flex-sm-row gap-2">
-            <?php if (! $isCompleted): ?>
-                <button
-                    type="button"
-                    class="btn btn-success"
-                    data-bs-toggle="modal"
-                    data-bs-target="#completeProjectModal"
-                >
-                    Tandai Selesai
-                </button>
-            <?php endif; ?>
+        <div class="d-flex flex-column flex-sm-row align-items-sm-center gap-2">
+            <div class="small">
+                <?php if ($isFullySettled): ?>
+                    <span class="badge bg-success">Selesai (otomatis)</span>
+                    <?php if (! empty($project['completed_at'])): ?>
+                        <span class="text-muted ms-1"><?= esc(date('d M Y', strtotime($project['completed_at']))) ?></span>
+                    <?php endif; ?>
+                <?php else: ?>
+                    <span class="text-muted">Belum lunas — <?= esc($settledCount) ?>/<?= esc($investorTotal) ?> pemodal tuntas</span>
+                <?php endif; ?>
+            </div>
             <form action="<?= esc(site_url('projects/' . $project['id'] . '/delete')) ?>" method="post"
                   onsubmit="return confirm('Yakin ingin menghapus proyek ini?');">
                 <?= csrf_field() ?>
@@ -378,110 +581,68 @@ $bersihKpiClass      = $keuntunganBersih >= 0 ? 'review-kpi--profit' : 'review-k
     </div>
 </div>
 
-<?php if (! $isCompleted): ?>
-<div class="modal fade" id="completeProjectModal" tabindex="-1" aria-labelledby="completeProjectModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content complete-modal">
-            <div class="modal-header border-0 pb-0">
-                <div>
-                    <h2 class="modal-title h5 mb-1" id="completeProjectModalLabel">Konfirmasi Dana Sudah Ditransfer</h2>
-                    <p class="text-muted small mb-0">Proyek: <strong class="text-dark"><?= esc($project['nama_proyek']) ?></strong></p>
+<div class="modal fade" id="recordTransactionModal" tabindex="-1" aria-labelledby="recordTransactionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form action="<?= esc(site_url('projects/' . $project['id'] . '/transactions')) ?>" method="post">
+                <?= csrf_field() ?>
+                <div class="modal-header">
+                    <h2 class="modal-title h5" id="recordTransactionModalLabel">Catat Transaksi</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
                 </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
-            </div>
-            <div class="modal-body pt-3">
-                <p class="mb-3">
-                    Tandai selesai hanya jika <strong>semua dana di bawah</strong> sudah Anda transfer ke pemodal dan operator sesuai perhitungan.
-                </p>
-
-                <?php if ($isRugi): ?>
-                    <div class="alert alert-warning small mb-0">
-                        Proyek ini rugi. Pastikan pengembalian modal (jika ada) sudah disepakati dengan pemodal.
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="txInvestorId" class="form-label">Pemodal</label>
+                        <select name="investor_id" id="txInvestorId" class="form-select" required>
+                            <option value="">Pilih pemodal</option>
+                            <?php foreach ($investorNames as $invId => $invName): ?>
+                                <option value="<?= esc((string) $invId) ?>"><?= esc($invName) ?></option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
-                <?php elseif (! $canSplitProfit): ?>
-                    <div class="alert alert-warning small mb-0">
-                        Biaya operasional melebihi profit kotor. Hanya pengembalian modal yang perlu ditransfer.
+                    <div class="mb-3">
+                        <label for="txJenis" class="form-label">Jenis</label>
+                        <select name="jenis" id="txJenis" class="form-select" required>
+                            <?php foreach ($jenisLabel as $value => $label): ?>
+                                <option value="<?= esc($value) ?>"><?= esc($label) ?></option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
-                <?php else: ?>
-                    <div class="complete-modal-section">
-                        <div class="complete-modal-section__title">
-                            <span class="complete-modal-section__icon bg-primary bg-opacity-10 text-primary">↩</span>
-                            Pengembalian Modal
-                        </div>
-                        <p class="complete-modal-section__hint">Dana pokok yang dikembalikan ke masing-masing pemodal.</p>
-                        <?php foreach ($result['investors'] as $investor): ?>
-                            <div class="complete-modal-row">
-                                <span><?= esc($investor['nama']) ?></span>
-                                <span class="money fw-semibold text-modal"><?= esc(format_rupiah((int) $investor['pengembalian_modal'])) ?></span>
-                            </div>
-                        <?php endforeach; ?>
-                        <div class="complete-modal-row complete-modal-row--subtotal">
-                            <span>Total pengembalian modal</span>
-                            <span class="money fw-bold text-modal"><?= esc(format_rupiah($totalModal)) ?></span>
-                        </div>
+                    <div class="mb-3">
+                        <label for="txJumlah" class="form-label">Jumlah</label>
+                        <input type="number" name="jumlah" id="txJumlah" class="form-control" min="1" step="1" required>
                     </div>
-
-                    <div class="complete-modal-section">
-                        <div class="complete-modal-section__title">
-                            <span class="complete-modal-section__icon bg-success bg-opacity-10 text-success">%</span>
-                            Profit Pemodal (<?= esc($persenPemodal) ?>%)
-                        </div>
-                        <p class="complete-modal-section__hint">Bagian keuntungan yang ditransfer ke pemodal.</p>
-                        <?php foreach ($result['investors'] as $investor): ?>
-                            <div class="complete-modal-row">
-                                <span><?= esc($investor['nama']) ?></span>
-                                <span class="money fw-semibold text-profit"><?= esc(format_rupiah((int) $investor['profit'])) ?></span>
-                            </div>
-                        <?php endforeach; ?>
-                        <div class="complete-modal-row complete-modal-row--subtotal">
-                            <span>Total profit pemodal</span>
-                            <span class="money fw-bold text-profit"><?= esc(format_rupiah((int) $result['pool_pemodal'])) ?></span>
-                        </div>
+                    <div class="mb-3">
+                        <label for="txTanggal" class="form-label">Tanggal</label>
+                        <input type="date" name="tanggal" id="txTanggal" class="form-control" value="<?= esc($today) ?>" required>
                     </div>
-
-                    <div class="complete-modal-section">
-                        <div class="complete-modal-section__title">
-                            <span class="complete-modal-section__icon bg-primary bg-opacity-10 text-primary">Op</span>
-                            Profit Operator (<?= esc($persenOperator) ?>%)
-                        </div>
-                        <p class="complete-modal-section__hint">Bagian keuntungan yang ditransfer ke operator.</p>
-                        <div class="complete-modal-row">
-                            <span><?= esc($project['nama_operator']) ?></span>
-                            <span class="money fw-semibold text-modal"><?= esc(format_rupiah((int) $result['pool_operator'])) ?></span>
-                        </div>
+                    <div class="mb-0">
+                        <label for="txCatatan" class="form-label">Catatan</label>
+                        <textarea name="catatan" id="txCatatan" class="form-control" rows="2" placeholder="Opsional"></textarea>
                     </div>
-
-                    <div class="complete-modal-total">
-                        <div class="complete-modal-row">
-                            <span class="fw-semibold">Total yang harus sudah ditransfer</span>
-                            <span class="money fw-bold">
-                                <?php
-                                $totalTransfer = $totalModal
-                                    + (int) $result['pool_pemodal']
-                                    + (int) $result['pool_operator'];
-                                echo esc(format_rupiah($totalTransfer));
-                                ?>
-                            </span>
-                        </div>
-                        <p class="small text-muted mb-0 mt-2">
-                            = Pengembalian modal + Profit pemodal + Profit operator
-                        </p>
-                    </div>
-                <?php endif; ?>
-
-                <p class="small text-muted mt-3 mb-0">
-                    Setelah ditandai selesai, proyek tidak dapat diedit lagi dan dipindah ke tab <strong>Selesai</strong>.
-                </p>
-            </div>
-            <div class="modal-footer border-0 pt-0 flex-column flex-sm-row gap-2">
-                <button type="button" class="btn btn-outline-secondary order-2 order-sm-1" data-bs-dismiss="modal">Batal</button>
-                <form action="<?= esc(site_url('projects/' . $project['id'] . '/complete')) ?>" method="post" class="order-1 order-sm-2 flex-grow-1 flex-sm-grow-0">
-                    <?= csrf_field() ?>
-                    <button type="submit" class="btn btn-success w-100">Ya, Semua Dana Sudah Ditransfer</button>
-                </form>
-            </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-success">Simpan</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
-<?php endif; ?>
+
+<script>
+(function () {
+    var modalEl = document.getElementById('recordTransactionModal');
+    if (!modalEl) return;
+    modalEl.addEventListener('show.bs.modal', function (event) {
+        var button = event.relatedTarget;
+        var select = document.getElementById('txInvestorId');
+        if (!select) return;
+        var investorId = button && button.getAttribute('data-investor-id');
+        if (investorId) {
+            select.value = investorId;
+        }
+    });
+})();
+</script>
 <?= $this->endSection() ?>
