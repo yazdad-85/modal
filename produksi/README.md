@@ -176,7 +176,14 @@ Di halaman detail proyek, gunakan tombol:
 - **Export PDF** — laporan siap cetak/kirim ke pemodal
 - **Export Excel** — spreadsheet untuk arsip atau edit lanjutan
 
-Laporan berisi semua data proyek dan breakdown perhitungan lengkap.
+Laporan berisi semua data proyek, breakdown perhitungan, **progress transaksi**, dan **riwayat transaksi** (PDF & Excel).
+
+Isi tambahan terkait transaksi:
+
+- Status lunas / belum lunas
+- Progress setor, pengembalian modal, dan pengembalian profit (sudah / target / sisa / %)
+- Progress per pemodal
+- Tabel riwayat transaksi (tanggal, pemodal, jenis, jumlah, catatan)
 
 ---
 

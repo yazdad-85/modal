@@ -3,9 +3,11 @@
 namespace App\Controllers;
 
 use App\Libraries\ProfitCalculator;
+use App\Libraries\TransactionService;
 use App\Models\InvestorModel;
 use App\Models\OperationalCostModel;
 use App\Models\ProjectModel;
+use App\Models\TransactionModel;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use Dompdf\Dompdf;
 use Dompdf\Options;
@@ -175,7 +177,104 @@ class ExportController extends BaseController
             $row++;
         }
 
-        foreach (range('A', 'D') as $column) {
+        $progress     = $data['progress'];
+        $transactions = $data['transactions'];
+        $investorNames = $data['investorNames'];
+        $jenisLabel   = $data['jenisLabel'];
+
+        $row += 2;
+        $sheet->setCellValue('A' . $row, 'Progress Transaksi');
+        $sheet->getStyle('A' . $row)->getFont()->setBold(true);
+        $row++;
+        $sheet->setCellValue(
+            'A' . $row,
+            ! empty($progress['is_fully_settled'])
+                ? 'Status: Lunas (semua kewajiban pemodal)'
+                : 'Status: Belum lunas'
+        );
+        $row += 2;
+
+        $sheet->fromArray(['Jenis', 'Sudah', 'Target', 'Sisa', '%'], null, 'A' . $row);
+        $sheet->getStyle('A' . $row . ':E' . $row)->getFont()->setBold(true);
+        $sheet->getStyle('A' . $row . ':E' . $row)->getFill()
+            ->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFE9ECEF');
+        $row++;
+
+        foreach (
+            [
+                ['Setor Modal', $progress['project']['setor']],
+                ['Pengembalian Modal', $progress['project']['modal']],
+                ['Pengembalian Profit', $progress['project']['profit']],
+            ] as [$label, $metric]
+        ) {
+            $sheet->fromArray([
+                $label,
+                (int) $metric['sudah'],
+                (int) $metric['target'],
+                (int) $metric['sisa'],
+                (int) $metric['persen'] . '%',
+            ], null, 'A' . $row);
+            $row++;
+        }
+
+        $row += 2;
+        $sheet->setCellValue('A' . $row, 'Progress per Pemodal');
+        $sheet->getStyle('A' . $row)->getFont()->setBold(true);
+        $row++;
+        $sheet->fromArray(
+            ['Pemodal', 'Setor %', 'Kembali Modal %', 'Kembali Profit %', 'Status'],
+            null,
+            'A' . $row
+        );
+        $sheet->getStyle('A' . $row . ':E' . $row)->getFont()->setBold(true);
+        $sheet->getStyle('A' . $row . ':E' . $row)->getFill()
+            ->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFE9ECEF');
+        $row++;
+
+        foreach ($progress['investors'] as $pInv) {
+            $sheet->fromArray([
+                $pInv['nama'],
+                (int) $pInv['setor']['persen'] . '%',
+                (int) $pInv['modal']['persen'] . '%',
+                (int) $pInv['profit']['persen'] . '%',
+                ! empty($pInv['settled']) ? 'Tuntas' : 'Belum tuntas',
+            ], null, 'A' . $row);
+            $row++;
+        }
+
+        $row += 2;
+        $sheet->setCellValue('A' . $row, 'Riwayat Transaksi');
+        $sheet->getStyle('A' . $row)->getFont()->setBold(true);
+        $row++;
+
+        if ($transactions === []) {
+            $sheet->setCellValue('A' . $row, 'Belum ada transaksi dicatat.');
+            $row++;
+        } else {
+            $sheet->fromArray(
+                ['Tanggal', 'Pemodal', 'Jenis', 'Jumlah', 'Catatan'],
+                null,
+                'A' . $row
+            );
+            $sheet->getStyle('A' . $row . ':E' . $row)->getFont()->setBold(true);
+            $sheet->getStyle('A' . $row . ':E' . $row)->getFill()
+                ->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFE9ECEF');
+            $row++;
+
+            foreach ($transactions as $tx) {
+                $jenis = (string) ($tx['jenis'] ?? '');
+                $sheet->fromArray([
+                    (string) ($tx['tanggal'] ?? ''),
+                    $investorNames[(int) ($tx['investor_id'] ?? 0)] ?? '-',
+                    $jenisLabel[$jenis] ?? $jenis,
+                    (int) ($tx['jumlah'] ?? 0),
+                    (string) ($tx['catatan'] ?? ''),
+                ], null, 'A' . $row);
+                $row++;
+            }
+        }
+
+        foreach (range('A', 'E') as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }
 
@@ -193,7 +292,16 @@ class ExportController extends BaseController
     }
 
     /**
-     * @return array{project: array<string, mixed>, investors: list<array<string, mixed>>, result: array<string, mixed>}
+     * @return array{
+     *     project: array<string, mixed>,
+     *     investors: list<array<string, mixed>>,
+     *     operationalCosts: list<array<string, mixed>>,
+     *     result: array<string, mixed>,
+     *     progress: array<string, mixed>,
+     *     transactions: list<array<string, mixed>>,
+     *     investorNames: array<int, string>,
+     *     jenisLabel: array<string, string>
+     * }
      */
     private function getProjectData(int $id): array
     {
@@ -228,7 +336,33 @@ class ExportController extends BaseController
             )
         );
 
-        return compact('project', 'investors', 'operationalCosts', 'result');
+        $transactionModel   = new TransactionModel();
+        $transactionService = new TransactionService();
+        $sums               = $transactionModel->sumsGroupedByInvestor($id);
+        $progress           = $transactionService->buildProgress($investors, $result, $sums);
+        $transactions       = $transactionModel->getByProject($id);
+
+        $investorNames = [];
+        foreach ($investors as $investor) {
+            $investorNames[(int) $investor['id']] = (string) $investor['nama'];
+        }
+
+        $jenisLabel = [
+            TransactionModel::JENIS_SETOR               => 'Setor modal',
+            TransactionModel::JENIS_PENGEMBALIAN_MODAL  => 'Pengembalian modal',
+            TransactionModel::JENIS_PENGEMBALIAN_PROFIT => 'Pengembalian profit',
+        ];
+
+        return compact(
+            'project',
+            'investors',
+            'operationalCosts',
+            'result',
+            'progress',
+            'transactions',
+            'investorNames',
+            'jenisLabel'
+        );
     }
 
     private function buildFilename(string $projectName, string $extension): string

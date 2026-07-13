@@ -238,6 +238,121 @@
         </tbody>
     </table>
 
+    <?php
+    $progress      = $progress ?? ['project' => [], 'investors' => [], 'is_fully_settled' => false];
+    $transactions  = $transactions ?? [];
+    $investorNames = $investorNames ?? [];
+    $jenisLabel    = $jenisLabel ?? [];
+    $projectProg   = $progress['project'] ?? [];
+    ?>
+
+    <h2>Progress Transaksi</h2>
+    <p>
+        Status:
+        <?php if (! empty($progress['is_fully_settled'])): ?>
+            <strong class="profit">Lunas (semua kewajiban pemodal)</strong>
+        <?php else: ?>
+            <strong>Belum lunas</strong>
+        <?php endif; ?>
+    </p>
+    <table class="data">
+        <thead>
+            <tr>
+                <th>Jenis</th>
+                <th class="number">Sudah</th>
+                <th class="number">Target</th>
+                <th class="number">Sisa</th>
+                <th class="number">%</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php
+            $projectMetrics = [
+                'Setor Modal'          => $projectProg['setor'] ?? null,
+                'Pengembalian Modal'   => $projectProg['modal'] ?? null,
+                'Pengembalian Profit'  => $projectProg['profit'] ?? null,
+            ];
+            foreach ($projectMetrics as $label => $metric):
+                if ($metric === null) {
+                    continue;
+                }
+                ?>
+                <tr>
+                    <td><?= esc($label) ?></td>
+                    <td class="number"><?= esc(format_rupiah((int) $metric['sudah'])) ?></td>
+                    <td class="number"><?= esc(format_rupiah((int) $metric['target'])) ?></td>
+                    <td class="number"><?= esc(format_rupiah((int) $metric['sisa'])) ?></td>
+                    <td class="number"><?= esc((int) $metric['persen']) ?>%</td>
+                </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+
+    <h2>Progress per Pemodal</h2>
+    <table class="data">
+        <thead>
+            <tr>
+                <th>Pemodal</th>
+                <th class="number">Setor</th>
+                <th class="number">Kembali Modal</th>
+                <th class="number">Kembali Profit</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach (($progress['investors'] ?? []) as $invRow): ?>
+                <tr>
+                    <td><?= esc($invRow['nama']) ?></td>
+                    <td class="number">
+                        <?= esc(format_rupiah((int) $invRow['setor']['sudah'])) ?>
+                        / <?= esc(format_rupiah((int) $invRow['setor']['target'])) ?>
+                        (<?= esc((int) $invRow['setor']['persen']) ?>%)
+                    </td>
+                    <td class="number">
+                        <?= esc(format_rupiah((int) $invRow['modal']['sudah'])) ?>
+                        / <?= esc(format_rupiah((int) $invRow['modal']['target'])) ?>
+                        (<?= esc((int) $invRow['modal']['persen']) ?>%)
+                    </td>
+                    <td class="number">
+                        <?= esc(format_rupiah((int) $invRow['profit']['sudah'])) ?>
+                        / <?= esc(format_rupiah((int) $invRow['profit']['target'])) ?>
+                        (<?= esc((int) $invRow['profit']['persen']) ?>%)
+                    </td>
+                    <td><?= ! empty($invRow['settled']) ? 'Tuntas' : 'Belum tuntas' ?></td>
+                </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+
+    <h2>Riwayat Transaksi</h2>
+    <?php if ($transactions === []): ?>
+        <p>Belum ada transaksi dicatat.</p>
+    <?php else: ?>
+        <table class="data">
+            <thead>
+                <tr>
+                    <th>Tanggal</th>
+                    <th>Pemodal</th>
+                    <th>Jenis</th>
+                    <th class="number">Jumlah</th>
+                    <th>Catatan</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($transactions as $tx): ?>
+                    <?php $jenis = (string) ($tx['jenis'] ?? ''); ?>
+                    <tr>
+                        <td><?= esc((string) ($tx['tanggal'] ?? '')) ?></td>
+                        <td><?= esc($investorNames[(int) ($tx['investor_id'] ?? 0)] ?? '-') ?></td>
+                        <td><?= esc($jenisLabel[$jenis] ?? $jenis) ?></td>
+                        <td class="number"><?= esc(format_rupiah((int) ($tx['jumlah'] ?? 0))) ?></td>
+                        <td><?= esc((string) ($tx['catatan'] ?? '')) ?></td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    <?php endif; ?>
+
     <div class="footer">
         ModalCalc — Laporan Bagi Hasil Investasi — Dicetak <?= esc(date('d/m/Y H:i')) ?>
     </div>
