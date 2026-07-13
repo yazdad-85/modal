@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\InvestorModel;
+use App\Models\ProjectModel;
 use App\Models\TransactionModel;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use Tests\Support\FeatureTestCase;
@@ -93,6 +94,8 @@ final class ProjectTest extends FeatureTestCase
                 'catatan'     => '',
             ]);
         }
+
+        $this->assertSame('completed', (new ProjectModel())->find($projectId)['status']);
 
         $edit = $this->get('projects/' . $projectId . '/edit');
         $edit->assertRedirectTo('/projects/' . $projectId);
