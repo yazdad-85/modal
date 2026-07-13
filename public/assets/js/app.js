@@ -946,18 +946,19 @@
     }
 
     function prepareFormSubmit() {
-        const form = document.getElementById('projectForm');
-        if (!form) {
-            return;
-        }
+        document.querySelectorAll('form').forEach(function (form) {
+            if (!form.querySelector('.number-input, .decimal-input')) {
+                return;
+            }
 
-        form.addEventListener('submit', function () {
-            document.querySelectorAll('.number-input').forEach(function (input) {
-                input.value = String(parseRupiah(input.dataset.rawValue || input.value));
-            });
-            document.querySelectorAll('.decimal-input').forEach(function (input) {
-                const raw = input.dataset.rawValue || String(parseDecimalId(input.value));
-                input.value = raw === '' ? '' : String(raw);
+            form.addEventListener('submit', function () {
+                form.querySelectorAll('.number-input').forEach(function (input) {
+                    input.value = String(parseRupiah(input.dataset.rawValue || input.value));
+                });
+                form.querySelectorAll('.decimal-input').forEach(function (input) {
+                    const raw = input.dataset.rawValue || String(parseDecimalId(input.value));
+                    input.value = raw === '' ? '' : String(raw);
+                });
             });
         });
     }

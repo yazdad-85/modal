@@ -139,3 +139,6 @@ _modules/*
 
 # Git worktrees
 .worktrees/
+
+# Local DB dumps (e.g. from production)
+/database/

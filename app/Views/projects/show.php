@@ -616,7 +616,17 @@ $canRecordTransactions = ! ($isCompleted && ! $hasTransactions);
                     </div>
                     <div class="mb-3">
                         <label for="txJumlah" class="form-label">Jumlah</label>
-                        <input type="number" name="jumlah" id="txJumlah" class="form-control" min="1" step="1" required>
+                        <input
+                            type="text"
+                            name="jumlah"
+                            id="txJumlah"
+                            class="form-control number-input"
+                            inputmode="numeric"
+                            autocomplete="off"
+                            placeholder="0"
+                            data-raw-value="0"
+                            required
+                        >
                     </div>
                     <div class="mb-3">
                         <label for="txTanggal" class="form-label">Tanggal</label>
