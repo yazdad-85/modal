@@ -183,6 +183,34 @@ class ProjectController extends BaseController
             ->with('success', 'Proyek berhasil diperbarui.');
     }
 
+    public function updateContractTime(int $id)
+    {
+        $this->findOwnedProject($id);
+
+        if (! $this->validate([
+            'waktu_kontrak' => 'permit_empty|max_length[100]',
+        ], [
+            'waktu_kontrak' => [
+                'max_length' => 'Waktu kontrak maksimal 100 karakter.',
+            ],
+        ])) {
+            return redirect()->to('/projects/' . $id)
+                ->with('errors', $this->validator->getErrors());
+        }
+
+        $waktuKontrak = trim((string) $this->request->getPost('waktu_kontrak'));
+
+        if (! $this->projectModel->update($id, [
+            'waktu_kontrak' => $waktuKontrak !== '' ? $waktuKontrak : null,
+        ])) {
+            return redirect()->to('/projects/' . $id)
+                ->with('error', 'Gagal menyimpan waktu kontrak proyek.');
+        }
+
+        return redirect()->to('/projects/' . $id)
+            ->with('success', 'Waktu kontrak proyek berhasil disimpan.');
+    }
+
     public function delete(int $id)
     {
         $this->findOwnedProject($id);

@@ -107,5 +107,15 @@ final class ProjectTest extends FeatureTestCase
 
         $edit = $this->get('projects/' . $projectId . '/edit');
         $edit->assertRedirectTo('/projects/' . $projectId);
+
+        $contractUpdate = $this->postWithCsrf('projects/' . $projectId . '/contract-time', [
+            'waktu_kontrak' => '25 Juli - 25 Agustus 2026',
+        ]);
+        $contractUpdate->assertRedirectTo('/projects/' . $projectId);
+
+        $this->assertSame(
+            '25 Juli - 25 Agustus 2026',
+            (new ProjectModel())->find($projectId)['waktu_kontrak']
+        );
     }
 }

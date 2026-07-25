@@ -89,9 +89,30 @@ $transactionProgressJson = json_encode(
 
     <div class="card review-section-card mb-3">
         <div class="card-body py-3">
-            <div class="d-flex flex-column flex-sm-row justify-content-between gap-1">
-                <span class="text-muted small">Waktu Kontrak Proyek</span>
-                <strong><?= esc($waktuKontrak !== '' ? $waktuKontrak : 'Belum diisi') ?></strong>
+            <form
+                action="<?= esc(site_url('projects/' . $project['id'] . '/contract-time')) ?>"
+                method="post"
+                class="row g-2 align-items-end"
+            >
+                <?= csrf_field() ?>
+                <div class="col-12 col-md">
+                    <label for="waktuKontrakInline" class="form-label text-muted small mb-1">Waktu Kontrak Proyek</label>
+                    <input
+                        type="text"
+                        class="form-control"
+                        id="waktuKontrakInline"
+                        name="waktu_kontrak"
+                        value="<?= esc($waktuKontrak) ?>"
+                        maxlength="100"
+                        placeholder="Contoh: 3 bulan"
+                    >
+                </div>
+                <div class="col-12 col-md-auto">
+                    <button type="submit" class="btn btn-outline-primary w-100">Simpan Kontrak</button>
+                </div>
+            </form>
+            <div class="small text-muted mt-2">
+                Saat proyek sudah punya transaksi, hanya waktu kontrak ini yang tetap bisa diubah.
             </div>
         </div>
     </div>
