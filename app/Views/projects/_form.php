@@ -77,6 +77,22 @@ $operationalCosts  = $operationalCosts ?? [];
                     </div>
 
                     <div class="col-12">
+                        <div class="form-floating">
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="waktu_kontrak"
+                                name="waktu_kontrak"
+                                value="<?= esc(old('waktu_kontrak', $project['waktu_kontrak'] ?? '')) ?>"
+                                placeholder="Waktu kontrak"
+                                maxlength="100"
+                            >
+                            <label for="waktu_kontrak">Waktu Kontrak Proyek (opsional)</label>
+                        </div>
+                        <div class="form-text">Contoh: 3 bulan, 25 Juli - 25 Agustus 2026.</div>
+                    </div>
+
+                    <div class="col-12">
                         <label class="form-label d-block">Mode Input</label>
                         <div class="btn-group w-100" role="group" aria-label="Mode input">
                             <input

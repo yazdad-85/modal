@@ -360,6 +360,7 @@ class ProjectController extends BaseController
             'nama_proyek'      => 'required|min_length[2]|max_length[200]',
             'mode_input'       => 'required|in_list[unit,direct]',
             'nama_operator'    => 'required|min_length[2]|max_length[100]',
+            'waktu_kontrak'    => 'permit_empty|max_length[100]',
             'persen_pemodal'   => 'required|decimal|greater_than_equal_to[0]|less_than_equal_to[100]',
             'persen_operator'  => 'required|decimal|greater_than_equal_to[0]|less_than_equal_to[100]',
             'catatan'          => 'permit_empty|max_length[5000]',
@@ -407,6 +408,7 @@ class ProjectController extends BaseController
             $jumlahUnit = (int) $this->request->getPost('jumlah_unit');
             $hargaBeli  = $this->parseAmount($this->request->getPost('harga_beli'));
             $hargaJual  = $this->parseAmount($this->request->getPost('harga_jual'));
+            $waktuKontrak = trim((string) $this->request->getPost('waktu_kontrak'));
 
             $totals = $this->calculator->computeUnitTotals($jumlahUnit, $hargaBeli, $hargaJual);
 
@@ -422,9 +424,12 @@ class ProjectController extends BaseController
                 'persen_pemodal'   => $persenPemodal,
                 'persen_operator'  => $persenOperator,
                 'nama_operator'    => trim((string) $this->request->getPost('nama_operator')),
+                'waktu_kontrak'    => $waktuKontrak !== '' ? $waktuKontrak : null,
                 'catatan'          => trim((string) $this->request->getPost('catatan')) ?: null,
             ];
         } else {
+            $waktuKontrak = trim((string) $this->request->getPost('waktu_kontrak'));
+
             $projectData = [
                 'user_id'          => (int) session('user_id'),
                 'nama_proyek'      => trim((string) $this->request->getPost('nama_proyek')),
@@ -437,6 +442,7 @@ class ProjectController extends BaseController
                 'persen_pemodal'   => $persenPemodal,
                 'persen_operator'  => $persenOperator,
                 'nama_operator'    => trim((string) $this->request->getPost('nama_operator')),
+                'waktu_kontrak'    => $waktuKontrak !== '' ? $waktuKontrak : null,
                 'catatan'          => trim((string) $this->request->getPost('catatan')) ?: null,
             ];
         }

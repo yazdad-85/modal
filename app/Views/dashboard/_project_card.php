@@ -3,6 +3,7 @@ $keuntungan  = (int) $project['total_hasil_jual'] - (int) $project['total_modal'
 $isRugi      = $keuntungan < 0;
 $isCompleted = ($project['status'] ?? 'active') === 'completed';
 $cardClass   = $isCompleted ? 'project-card--completed' : '';
+$waktuKontrak = trim((string) ($project['waktu_kontrak'] ?? ''));
 ?>
 <div class="col-12 col-md-6 col-lg-4">
     <div class="card project-card shadow-sm border-0 h-100 <?= esc($cardClass) ?>">
@@ -34,6 +35,10 @@ $cardClass   = $isCompleted ? 'project-card--completed' : '';
                 <div class="d-flex justify-content-between small text-muted mb-1">
                     <span>Hasil Jual</span>
                     <span class="money"><?= esc(format_rupiah((int) $project['total_hasil_jual'])) ?></span>
+                </div>
+                <div class="d-flex justify-content-between small text-muted mb-1">
+                    <span>Kontrak</span>
+                    <span class="text-end"><?= esc($waktuKontrak !== '' ? $waktuKontrak : 'Belum diisi') ?></span>
                 </div>
                 <div class="d-flex justify-content-between small">
                     <span><?= $isRugi ? 'Rugi' : 'Keuntungan' ?></span>

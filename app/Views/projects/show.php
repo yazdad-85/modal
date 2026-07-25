@@ -11,6 +11,7 @@ $isCompleted         = ($project['status'] ?? 'active') === 'completed';
 $modeBadge           = $isUnit ? 'Per Unit' : 'Langsung';
 $persenPemodal       = (float) $project['persen_pemodal'];
 $persenOperator      = (float) $project['persen_operator'];
+$waktuKontrak        = trim((string) ($project['waktu_kontrak'] ?? ''));
 $totalModal          = (int) $result['total_modal'];
 $totalBiayaOps       = (int) $result['total_biaya_operasional'];
 $keuntunganKotor     = (int) $result['keuntungan_kotor'];
@@ -57,6 +58,9 @@ $transactionProgressJson = json_encode(
                 <p class="text-muted mb-0">
                     Operator <strong class="text-dark"><?= esc($project['nama_operator']) ?></strong>
                     <span class="badge bg-primary bg-opacity-10 text-primary ms-1"><?= esc($modeBadge) ?></span>
+                    <span class="d-block d-sm-inline mt-1 mt-sm-0 ms-sm-1">
+                        Kontrak <strong class="text-dark"><?= esc($waktuKontrak !== '' ? $waktuKontrak : 'Belum diisi') ?></strong>
+                    </span>
                     <?php if ($isCompleted): ?>
                         <span class="badge bg-secondary ms-1">Selesai</span>
                         <?php if (! empty($project['completed_at'])): ?>
@@ -79,6 +83,15 @@ $transactionProgressJson = json_encode(
                 <a href="<?= esc(site_url('projects/' . $project['id'] . '/export/excel')) ?>" class="btn btn-outline-success">
                     Excel
                 </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="card review-section-card mb-3">
+        <div class="card-body py-3">
+            <div class="d-flex flex-column flex-sm-row justify-content-between gap-1">
+                <span class="text-muted small">Waktu Kontrak Proyek</span>
+                <strong><?= esc($waktuKontrak !== '' ? $waktuKontrak : 'Belum diisi') ?></strong>
             </div>
         </div>
     </div>

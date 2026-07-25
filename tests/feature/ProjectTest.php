@@ -22,12 +22,20 @@ final class ProjectTest extends FeatureTestCase
             'persen_pemodal'  => 60,
             'persen_operator' => 40,
             'nama_operator'   => 'Operator A',
+            'waktu_kontrak'   => '3 bulan',
             'investor_nama'   => ['Pemodal A', 'Pemodal B'],
             'investor_modal'  => [150_000_000, 200_000_000],
         ]);
 
         $result->assertRedirect();
         $this->assertMatchesRegularExpression('#/projects/\d+#', $result->getRedirectUrl());
+
+        preg_match('#/projects/(\d+)#', $result->getRedirectUrl(), $matches);
+        $projectId = (int) $matches[1];
+        $this->assertSame('3 bulan', (new ProjectModel())->find($projectId)['waktu_kontrak']);
+
+        $this->get('projects/' . $projectId)->assertSee('Waktu Kontrak Proyek');
+        $this->get('projects/' . $projectId)->assertSee('3 bulan');
     }
 
     public function testCannotAccessOtherUsersProject(): void

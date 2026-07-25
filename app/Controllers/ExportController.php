@@ -64,6 +64,7 @@ class ExportController extends BaseController
         $row++;
 
         $summary = [
+            ['Waktu Kontrak Proyek', trim((string) ($project['waktu_kontrak'] ?? '')) !== '' ? (string) $project['waktu_kontrak'] : 'Belum diisi'],
             ['Total Modal', (int) $result['total_modal']],
             ['Total Hasil Jual', (int) $result['total_hasil_jual']],
             [$isRugi ? 'Rugi' : 'Profit Kotor', abs((int) $result['keuntungan_kotor'])],

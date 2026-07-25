@@ -79,6 +79,7 @@
     </style>
 </head>
 <body>
+    <?php $waktuKontrak = trim((string) ($project['waktu_kontrak'] ?? '')); ?>
     <h1><?= esc($project['nama_proyek']) ?></h1>
     <div class="meta">
         Operator: <?= esc($project['nama_operator']) ?>
@@ -90,6 +91,10 @@
 
     <h2>Ringkasan</h2>
     <table class="summary">
+        <tr>
+            <td>Waktu Kontrak Proyek</td>
+            <td><?= esc($waktuKontrak !== '' ? $waktuKontrak : 'Belum diisi') ?></td>
+        </tr>
         <tr>
             <td>Total Modal</td>
             <td class="modal-color"><?= esc(format_rupiah((int) $result['total_modal'])) ?></td>

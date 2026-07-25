@@ -683,6 +683,7 @@
                         '<div>' +
                             '<div class="project-title">' + escapeHtml(data.namaProyek || 'Proyek Baru') + '</div>' +
                             '<div class="text-muted small mt-1">Operator: <strong class="text-dark">' + escapeHtml(data.namaOperator || '-') + '</strong></div>' +
+                            '<div class="text-muted small mt-1">Kontrak: <strong class="text-dark">' + escapeHtml(data.waktuKontrak || 'Belum diisi') + '</strong></div>' +
                         '</div>' +
                         '<span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2">' + modeBadge + '</span>' +
                     '</div>' +
@@ -730,6 +731,7 @@
             mode: mode,
             namaProyek: getFormValue('nama_proyek'),
             namaOperator: getFormValue('nama_operator'),
+            waktuKontrak: getFormValue('waktu_kontrak'),
             catatan: getFormValue('catatan'),
             units: getNumericFieldValue('jumlah_unit'),
             buy: parseRupiah(getFormValue('harga_beli')),
@@ -896,7 +898,7 @@
             });
         });
 
-        ['persen_pemodal', 'persen_operator', 'nama_proyek', 'nama_operator', 'catatan'].forEach(function (id) {
+        ['persen_pemodal', 'persen_operator', 'nama_proyek', 'nama_operator', 'waktu_kontrak', 'catatan'].forEach(function (id) {
             const el = document.getElementById(id);
             if (!el) {
                 return;

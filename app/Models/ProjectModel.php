@@ -11,8 +11,8 @@ class ProjectModel extends Model
     protected $allowedFields    = [
         'user_id', 'nama_proyek', 'mode_input', 'jumlah_unit',
         'harga_beli', 'harga_jual', 'total_modal', 'total_hasil_jual',
-        'persen_pemodal', 'persen_operator', 'nama_operator', 'catatan',
-        'status', 'completed_at',
+        'persen_pemodal', 'persen_operator', 'nama_operator',
+        'waktu_kontrak', 'catatan', 'status', 'completed_at',
     ];
     protected $useTimestamps = true;
 
