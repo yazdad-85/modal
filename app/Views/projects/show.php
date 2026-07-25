@@ -40,6 +40,10 @@ foreach ($investorProgress as $row) {
 $investorTotal       = count($investorProgress);
 $today               = date('Y-m-d');
 $canRecordTransactions = ! ($isCompleted && ! $hasTransactions);
+$transactionProgressJson = json_encode(
+    $investorProgress,
+    JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP
+);
 ?>
 
 <div class="result-page">
@@ -627,6 +631,34 @@ $canRecordTransactions = ! ($isCompleted && ! $hasTransactions);
                             data-raw-value="0"
                             required
                         >
+                        <div class="tx-amount-help mt-2" id="txAmountHelp">
+                            <div class="d-flex justify-content-between align-items-start gap-2">
+                                <div>
+                                    <div class="tx-amount-help__label" id="txAmountLabel">Pilih pemodal dan jenis transaksi</div>
+                                    <div class="tx-amount-help__amount money" id="txAmountRemaining">Rp 0</div>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-success" id="txFillRemaining" disabled>
+                                    Isi sisa
+                                </button>
+                            </div>
+                            <div class="small text-muted mt-1" id="txAmountDetail">
+                                Sisa yang harus dicatat akan muncul di sini.
+                            </div>
+                            <div class="tx-remaining-list mt-2" aria-label="Ringkasan sisa transaksi pemodal">
+                                <div>
+                                    <span>Setor</span>
+                                    <strong class="money" id="txSisaSetor">Rp 0</strong>
+                                </div>
+                                <div>
+                                    <span>Kembali modal</span>
+                                    <strong class="money" id="txSisaModal">Rp 0</strong>
+                                </div>
+                                <div>
+                                    <span>Kembali profit</span>
+                                    <strong class="money" id="txSisaProfit">Rp 0</strong>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label for="txTanggal" class="form-label">Tanggal</label>
@@ -650,15 +682,134 @@ $canRecordTransactions = ! ($isCompleted && ! $hasTransactions);
 (function () {
     var modalEl = document.getElementById('recordTransactionModal');
     if (!modalEl) return;
+
+    var investorProgress = <?= $transactionProgressJson !== false ? $transactionProgressJson : '[]' ?>;
+    var progressByInvestor = {};
+    investorProgress.forEach(function (row) {
+        progressByInvestor[String(row.investor_id)] = row;
+    });
+
+    var jenisToMetric = {
+        setor_modal: 'setor',
+        pengembalian_modal: 'modal',
+        pengembalian_profit: 'profit'
+    };
+    var jenisLabels = {
+        setor_modal: 'Setor modal',
+        pengembalian_modal: 'Pengembalian modal',
+        pengembalian_profit: 'Pengembalian profit'
+    };
+
+    var investorSelect = document.getElementById('txInvestorId');
+    var jenisSelect = document.getElementById('txJenis');
+    var amountInput = document.getElementById('txJumlah');
+    var amountLabel = document.getElementById('txAmountLabel');
+    var amountRemaining = document.getElementById('txAmountRemaining');
+    var amountDetail = document.getElementById('txAmountDetail');
+    var fillRemainingButton = document.getElementById('txFillRemaining');
+    var sisaSetor = document.getElementById('txSisaSetor');
+    var sisaModal = document.getElementById('txSisaModal');
+    var sisaProfit = document.getElementById('txSisaProfit');
+    var currentRemaining = 0;
+
+    function parseAmount(value) {
+        var cleaned = String(value || '').replace(/[^\d]/g, '');
+        return cleaned === '' ? 0 : parseInt(cleaned, 10);
+    }
+
+    function formatRupiah(amount) {
+        return 'Rp ' + parseAmount(amount).toLocaleString('id-ID');
+    }
+
+    function metric(row, key) {
+        return row && row[key] ? row[key] : { target: 0, sudah: 0, sisa: 0, persen: 0 };
+    }
+
+    function selectedMetric() {
+        var row = progressByInvestor[String(investorSelect ? investorSelect.value : '')];
+        var key = jenisToMetric[jenisSelect ? jenisSelect.value : ''];
+        return {
+            row: row || null,
+            key: key || '',
+            data: metric(row, key)
+        };
+    }
+
+    function setAmountInput(raw) {
+        if (!amountInput) return;
+        amountInput.dataset.rawValue = String(raw);
+        amountInput.value = raw > 0 ? raw.toLocaleString('id-ID') : '';
+        amountInput.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    function validateAmount() {
+        if (!amountInput) return;
+        var picked = selectedMetric();
+        var raw = parseAmount(amountInput.dataset.rawValue || amountInput.value);
+
+        amountInput.setCustomValidity('');
+        if (!picked.row || !picked.key || raw === 0) {
+            return;
+        }
+        if (raw > picked.data.sisa) {
+            amountInput.setCustomValidity('Jumlah melebihi sisa ' + formatRupiah(picked.data.sisa) + '.');
+        }
+    }
+
+    function updateAmountHelp() {
+        var picked = selectedMetric();
+        var row = picked.row;
+        var data = picked.data;
+        var jenis = jenisSelect ? jenisSelect.value : '';
+        var label = jenisLabels[jenis] || 'Transaksi';
+
+        if (sisaSetor) sisaSetor.textContent = formatRupiah(metric(row, 'setor').sisa);
+        if (sisaModal) sisaModal.textContent = formatRupiah(metric(row, 'modal').sisa);
+        if (sisaProfit) sisaProfit.textContent = formatRupiah(metric(row, 'profit').sisa);
+
+        currentRemaining = row && picked.key ? parseAmount(data.sisa) : 0;
+        if (amountInput) {
+            amountInput.placeholder = currentRemaining > 0 ? currentRemaining.toLocaleString('id-ID') : '0';
+        }
+        if (fillRemainingButton) {
+            fillRemainingButton.disabled = currentRemaining <= 0;
+        }
+
+        if (!row) {
+            if (amountLabel) amountLabel.textContent = 'Pilih pemodal dan jenis transaksi';
+            if (amountRemaining) amountRemaining.textContent = 'Rp 0';
+            if (amountDetail) amountDetail.textContent = 'Sisa yang harus dicatat akan muncul di sini.';
+            validateAmount();
+            return;
+        }
+
+        if (amountLabel) amountLabel.textContent = 'Sisa ' + label.toLowerCase();
+        if (amountRemaining) amountRemaining.textContent = formatRupiah(data.sisa);
+        if (amountDetail) {
+            amountDetail.textContent = 'Sudah ' + formatRupiah(data.sudah) + ' dari target ' + formatRupiah(data.target) + '.';
+        }
+        validateAmount();
+    }
+
     modalEl.addEventListener('show.bs.modal', function (event) {
         var button = event.relatedTarget;
-        var select = document.getElementById('txInvestorId');
-        if (!select) return;
         var investorId = button && button.getAttribute('data-investor-id');
-        if (investorId) {
-            select.value = investorId;
+        if (investorSelect && investorId) {
+            investorSelect.value = investorId;
         }
+        updateAmountHelp();
     });
+
+    if (investorSelect) investorSelect.addEventListener('change', updateAmountHelp);
+    if (jenisSelect) jenisSelect.addEventListener('change', updateAmountHelp);
+    if (amountInput) amountInput.addEventListener('input', validateAmount);
+    if (fillRemainingButton) {
+        fillRemainingButton.addEventListener('click', function () {
+            setAmountInput(currentRemaining);
+        });
+    }
+
+    updateAmountHelp();
 })();
 </script>
 <?php endif; ?>
